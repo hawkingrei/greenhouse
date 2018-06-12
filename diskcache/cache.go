@@ -30,8 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/test-infra/greenhouse/diskutil"
-
+	"github.com/hawkingrei/greenhouse/diskutil"
 	"github.com/sirupsen/logrus"
 )
 
