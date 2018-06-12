@@ -107,9 +107,9 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 	}
 
 	// fast path copying when not hashing content,s
-	tempz := zlib.NewWriter(temp)
+	writer := zlib.NewWriter(temp)
 	if contentSHA256 == "" {
-		_, err = io.Copy(tempz, content)
+		_, err = io.Copy(writer, content)
 		if err != nil {
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
@@ -129,14 +129,17 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 				"hashes did not match for '%s', given: '%s' actual: '%s",
 				key, contentSHA256, actualContentSHA256)
 		}
-		_, err = io.Copy(tempz, content)
+		_, err = io.Copy(writer, content)
 		if err != nil {
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
 		}
 	}
-
-	// move the content to the key location
+	err = writer.Close()
+	if err != nil {
+		removeTemp(temp.Name())
+		return fmt.Errorf("failed to sync cache entry: %v", err)
+	}
 	err = temp.Sync()
 	if err != nil {
 		removeTemp(temp.Name())
