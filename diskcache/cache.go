@@ -18,8 +18,6 @@ limitations under the License.
 package diskcache
 
 import (
-	"bytes"
-	"compress/zlib"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -34,7 +32,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ReadHandler should be implemeted by cache users for use with Cache.Get
+// ReadHandler should be implemented by cache users for use with Cache.Get
 type ReadHandler func(exists bool, contents io.ReadSeeker) error
 
 // Cache implements disk backed cache storage
@@ -107,9 +105,8 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 	}
 
 	// fast path copying when not hashing content,s
-	writer := zlib.NewWriter(temp)
 	if contentSHA256 == "" {
-		_, err = io.Copy(writer, content)
+		_, err = io.Copy(temp, content)
 		if err != nil {
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
@@ -117,7 +114,7 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 
 	} else {
 		hasher := sha256.New()
-		_, err = io.Copy(io.MultiWriter(hasher), content)
+		_, err = io.Copy(io.MultiWriter(temp, hasher), content)
 		if err != nil {
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
@@ -129,17 +126,9 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 				"hashes did not match for '%s', given: '%s' actual: '%s",
 				key, contentSHA256, actualContentSHA256)
 		}
-		_, err = io.Copy(writer, content)
-		if err != nil {
-			removeTemp(temp.Name())
-			return fmt.Errorf("failed to copy into cache entry: %v", err)
-		}
 	}
-	err = writer.Close()
-	if err != nil {
-		removeTemp(temp.Name())
-		return fmt.Errorf("failed to sync cache entry: %v", err)
-	}
+
+	// move the content to the key location
 	err = temp.Sync()
 	if err != nil {
 		removeTemp(temp.Name())
@@ -164,16 +153,7 @@ func (c *Cache) Get(key string, readHandler ReadHandler) error {
 		}
 		return fmt.Errorf("failed to get key: %v", err)
 	}
-	z, err := zlib.NewReader(f)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return readHandler(false, nil)
-		}
-		return fmt.Errorf("failed to get key: %v", err)
-	}
-	byter, _ := ioutil.ReadAll(z)
-	r := bytes.NewReader(byter)
-	return readHandler(true, r)
+	return readHandler(true, f)
 }
 
 // EntryInfo are returned when getting entries from the cache
