@@ -18,6 +18,7 @@ limitations under the License.
 package diskcache
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hawkingrei/greenhouse/compress"
 	"github.com/hawkingrei/greenhouse/diskutil"
 	"github.com/sirupsen/logrus"
 )
@@ -91,6 +93,7 @@ func removeTemp(path string) {
 // cache if the content's hex string SHA256 matches
 func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 	// make sure directory exists
+	// var intermediate bytes.Buffer
 	path := c.KeyToPath(key)
 	dir := filepath.Dir(path)
 	err := ensureDir(dir)
@@ -105,16 +108,26 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 	}
 
 	// fast path copying when not hashing content,s
+	//w := zstd.NewWriterLevel(&intermediate, 4)
+	//w.Write(content)
+	compressor := compress.Compressors[compress.ZstdAlgorithmName]
+	compressingWriter := compressor.NewWriter(temp)
+	defer compressingWriter.Close()
 	if contentSHA256 == "" {
-		_, err = io.Copy(temp, content)
+		_, err := compressingWriter.ReadFrom(content)
 		if err != nil {
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
 		}
-
 	} else {
+		var buf bytes.Buffer
 		hasher := sha256.New()
-		_, err = io.Copy(io.MultiWriter(temp, hasher), content)
+		_, err = io.Copy(io.MultiWriter(&buf, hasher), content)
+		if err != nil {
+			removeTemp(temp.Name())
+			return fmt.Errorf("failed to copy into cache entry: %v", err)
+		}
+		_, err := compressingWriter.ReadFrom(&buf)
 		if err != nil {
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
@@ -145,6 +158,8 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 
 // Get provides your readHandler with the contents at key
 func (c *Cache) Get(key string, readHandler ReadHandler) error {
+	decompressor := compress.Decompressors[compress.ZstdAlgorithmName]
+	buf := NewBuffer([]byte{})
 	path := c.KeyToPath(key)
 	f, err := os.Open(path)
 	if err != nil {
@@ -153,7 +168,11 @@ func (c *Cache) Get(key string, readHandler ReadHandler) error {
 		}
 		return fmt.Errorf("failed to get key: %v", err)
 	}
-	return readHandler(true, f)
+	err = decompressor.Decompress(buf, f)
+	if err != nil {
+		return fmt.Errorf("failed to get key when decompress: %v", err)
+	}
+	return readHandler(true, buf)
 }
 
 // EntryInfo are returned when getting entries from the cache
