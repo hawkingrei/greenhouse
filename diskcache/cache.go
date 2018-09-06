@@ -112,10 +112,10 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 	//w.Write(content)
 	compressor := compress.Compressors[compress.ZstdAlgorithmName]
 	compressingWriter := compressor.NewWriter(temp)
-	defer compressingWriter.Close()
 	if contentSHA256 == "" {
 		_, err := compressingWriter.ReadFrom(content)
 		if err != nil {
+			compressingWriter.Close()
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
 		}
@@ -124,16 +124,19 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 		hasher := sha256.New()
 		_, err = io.Copy(io.MultiWriter(&buf, hasher), content)
 		if err != nil {
+			compressingWriter.Close()
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
 		}
 		_, err := compressingWriter.ReadFrom(&buf)
 		if err != nil {
+			compressingWriter.Close()
 			removeTemp(temp.Name())
 			return fmt.Errorf("failed to copy into cache entry: %v", err)
 		}
 		actualContentSHA256 := hex.EncodeToString(hasher.Sum(nil))
 		if actualContentSHA256 != contentSHA256 {
+			compressingWriter.Close()
 			removeTemp(temp.Name())
 			return fmt.Errorf(
 				"hashes did not match for '%s', given: '%s' actual: '%s",
@@ -144,9 +147,11 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 	// move the content to the key location
 	err = temp.Sync()
 	if err != nil {
+		compressingWriter.Close()
 		removeTemp(temp.Name())
 		return fmt.Errorf("failed to sync cache entry: %v", err)
 	}
+	compressingWriter.Close()
 	temp.Close()
 	err = os.Rename(temp.Name(), path)
 	if err != nil {
