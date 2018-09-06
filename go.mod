@@ -1,6 +1,7 @@
 module github.com/hawkingrei/greenhouse
 
 require (
+	github.com/DataDog/zstd v1.3.4
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 	github.com/djherbis/atime v1.0.0
 	github.com/golang/protobuf v1.1.0
