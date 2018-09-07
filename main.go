@@ -32,6 +32,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -50,6 +51,7 @@ var cachePort = flag.Int("cache-port", 8080, "port to listen on for cache reques
 var metricsPort = flag.Int("metrics-port", 9090, "port to listen on for prometheus metrics scraping")
 var metricsUpdateInterval = flag.Duration("metrics-update-interval", time.Second*10,
 	"interval between updating disk metrics")
+var zstdDict = flag.String("-zstd-dict", "", "location to get zsrd dict")
 
 // eviction knobs
 var minPercentBlocksFree = flag.Float64("min-percent-blocks-free", 5,
@@ -74,6 +76,14 @@ func main() {
 	flag.Parse()
 	if *dir == "" {
 		logrus.Fatal("--dir must be set!")
+	}
+
+	if *zstdDict == "" {
+		logrus.Fatal("--zstd-dict must be set!")
+	}
+	ZstdDict, err := ioutil.ReadFile(*zstdDict)
+	if err != nil {
+		logrus.Fatal("fail to read zstd-dict!")
 	}
 
 	cache := diskcache.NewCache(*dir)

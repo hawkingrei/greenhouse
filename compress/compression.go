@@ -12,8 +12,10 @@ const (
 	ZstdFileExtension = "zst"
 	LzoFileExtension  = "lzo"
 
-	CompressedBlockMaxSize = 20 << 20
+	CompressedBlockMaxSize = 20 << 2
 )
+
+var ZstdDict []byte
 
 type Compressor interface {
 	NewWriter(writer io.Writer) ReaderFromWriteCloser
