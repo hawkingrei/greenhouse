@@ -38,6 +38,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hawkingrei/greenhouse/compress"
 	"github.com/hawkingrei/greenhouse/diskcache"
 	"github.com/hawkingrei/greenhouse/diskutil"
 
@@ -74,6 +75,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+	var err error
 	if *dir == "" {
 		logrus.Fatal("--dir must be set!")
 	}
@@ -81,7 +83,7 @@ func main() {
 	if *zstdDict == "" {
 		logrus.Fatal("--zstd-dict must be set!")
 	}
-	ZstdDict, err := ioutil.ReadFile(*zstdDict)
+	compress.ZstdDict, err = ioutil.ReadFile(*zstdDict)
 	if err != nil {
 		logrus.Fatal("fail to read zstd-dict!")
 	}
