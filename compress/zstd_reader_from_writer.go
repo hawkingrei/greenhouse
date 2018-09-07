@@ -11,7 +11,7 @@ type ZstdReaderFromWriter struct {
 }
 
 func NewZstdReaderFromWriter(dst io.Writer) *ZstdReaderFromWriter {
-	zstdWriter := zstd.NewWriterLevelDict(dst, 5, ZstdDict)
+	zstdWriter := zstd.NewWriterLevelDict(dst, 7, ZstdDict)
 	return &ZstdReaderFromWriter{Writer: *zstdWriter}
 }
 
