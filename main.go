@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"strings"
 	"time"
@@ -48,6 +49,7 @@ var dir = flag.String("dir", "", "location to store cache entries on disk")
 var host = flag.String("host", "", "host address to listen on")
 var cachePort = flag.Int("cache-port", 8080, "port to listen on for cache requests")
 var metricsPort = flag.Int("metrics-port", 9090, "port to listen on for prometheus metrics scraping")
+var pprofPort = flag.Int("pprof-port", 9091, "port to listen on for pprof")
 var metricsUpdateInterval = flag.Duration("metrics-update-interval", time.Second*10,
 	"interval between updating disk metrics")
 
@@ -92,6 +94,21 @@ func main() {
 		logrus.Infof("Metrics Listening on: %s", metricsAddr)
 		logrus.WithField("mux", "metrics").WithError(
 			http.ListenAndServe(metricsAddr, metricsMux),
+		).Fatal("ListenAndServe returned.")
+	}()
+
+	// listen for pprofMux
+	pprofMux := http.NewServeMux()
+	pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
+	pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	pprofAddr := fmt.Sprintf("%s:%d", *host, *pprofPort)
+	go func() {
+		logrus.Infof("pprof Listening on: %s", pprofAddr)
+		logrus.WithField("mux", "pprof").WithError(
+			http.ListenAndServe(pprofAddr, pprofMux),
 		).Fatal("ListenAndServe returned.")
 	}()
 
