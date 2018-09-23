@@ -16,7 +16,7 @@ const (
 )
 
 type Compressor interface {
-	NewWriter(writer io.Writer) ReaderFromWriteCloser
+	NewWriter(writer io.Writer, level int) ReaderFromWriteCloser
 	FileExtension() string
 }
 

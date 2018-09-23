@@ -50,6 +50,7 @@ var host = flag.String("host", "", "host address to listen on")
 var cachePort = flag.Int("cache-port", 8080, "port to listen on for cache requests")
 var metricsPort = flag.Int("metrics-port", 9090, "port to listen on for prometheus metrics scraping")
 var pprofPort = flag.Int("pprof-port", 9091, "port to listen on for pprof")
+var level = flag.Int("level", 3, "compression level")
 var metricsUpdateInterval = flag.Duration("metrics-update-interval", time.Second*10,
 	"interval between updating disk metrics")
 
@@ -78,7 +79,7 @@ func main() {
 		logrus.Fatal("--dir must be set!")
 	}
 
-	cache := diskcache.NewCache(*dir)
+	cache := diskcache.NewCache(*dir, *level)
 	go monitorDiskAndEvict(
 		cache, *diskCheckInterval,
 		*minPercentBlocksFree, *evictUntilPercentBlocksFree,
@@ -127,6 +128,11 @@ var errNotFound = errors.New("entry not found")
 
 func cacheHandler(cache *diskcache.Cache) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			hash    string
+			acOrCAS string
+			gradle  bool
+		)
 		logger := logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"path":   r.URL.Path,
@@ -136,19 +142,21 @@ func cacheHandler(cache *diskcache.Cache) http.Handler {
 		// the second to last segment should be "ac" or "cas"
 		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) < 3 {
-			logger.Warn("received an invalid request")
-			http.Error(w, "invalid location", http.StatusBadRequest)
+			gradle = true
 			return
 		}
-		hash := parts[len(parts)-1]
-		acOrCAS := parts[len(parts)-2]
-		if acOrCAS != "ac" && acOrCAS != "cas" {
-			logger.Warn("received an invalid request at path")
-			http.Error(w, "invalid location", http.StatusBadRequest)
-			return
+		if !gradle {
+			hash = parts[len(parts)-1]
+			acOrCAS = parts[len(parts)-2]
+			if acOrCAS != "ac" && acOrCAS != "cas" {
+				gradle = true
+			}
+		}
+		if gradle {
+			hash = ""
+			acOrCAS = "ac"
 		}
 		requestingAction := acOrCAS == "ac"
-
 		// actually handle request depending on method
 		switch m := r.Method; m {
 		// handle retreival
@@ -172,6 +180,7 @@ func cacheHandler(cache *diskcache.Cache) http.Handler {
 					return
 				}
 				// unknown error
+				logger.Warnf("MethodGet fail %v", r.URL.Path)
 				logger.WithError(err).Error("error getting key")
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -182,7 +191,6 @@ func cacheHandler(cache *diskcache.Cache) http.Handler {
 			} else {
 				promMetrics.CASHits.Inc()
 			}
-
 		// handle upload
 		case http.MethodPut:
 			// only hash CAS, not action cache
@@ -193,11 +201,11 @@ func cacheHandler(cache *diskcache.Cache) http.Handler {
 			}
 			err := cache.Put(r.URL.Path, r.Body, hash)
 			if err != nil {
+				logger.Warnf("MethodPut fail %v", r.URL.Path)
 				logger.WithError(err).Errorf("Failed to put: %v", r.URL.Path)
 				http.Error(w, "failed to put in cache", http.StatusInternalServerError)
 				return
 			}
-
 		// handle unsupported methods...
 		default:
 			logger.Warn("received an invalid request method")

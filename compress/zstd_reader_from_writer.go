@@ -10,8 +10,8 @@ type ZstdReaderFromWriter struct {
 	zstd.Writer
 }
 
-func NewZstdReaderFromWriter(dst io.Writer) *ZstdReaderFromWriter {
-	zstdWriter := zstd.NewWriterLevel(dst, 3)
+func NewZstdReaderFromWriter(dst io.Writer, level int) *ZstdReaderFromWriter {
+	zstdWriter := zstd.NewWriterLevel(dst, level)
 	return &ZstdReaderFromWriter{Writer: *zstdWriter}
 }
 

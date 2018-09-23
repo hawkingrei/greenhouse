@@ -1,4 +1,4 @@
-module github.com/hawkingrei/greenhouse
+module greenhouse
 
 require (
 	github.com/DataDog/zstd v1.3.4

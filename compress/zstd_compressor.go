@@ -6,8 +6,8 @@ import (
 
 type ZstdCompressor struct{}
 
-func (compressor ZstdCompressor) NewWriter(writer io.Writer) ReaderFromWriteCloser {
-	return NewZstdReaderFromWriter(writer)
+func (compressor ZstdCompressor) NewWriter(writer io.Writer, level int) ReaderFromWriteCloser {
+	return NewZstdReaderFromWriter(writer, level)
 }
 
 func (compressor ZstdCompressor) FileExtension() string {

@@ -31,6 +31,7 @@ import (
 
 	"github.com/hawkingrei/greenhouse/compress"
 	"github.com/hawkingrei/greenhouse/diskutil"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,14 +41,16 @@ type ReadHandler func(exists bool, contents io.ReadSeeker) error
 // Cache implements disk backed cache storage
 type Cache struct {
 	diskRoot string
+	level    int
 	logger   *logrus.Entry
 }
 
 // NewCache returns a new Cache given the root directory that should be used
 // on disk for cache storage
-func NewCache(diskRoot string) *Cache {
+func NewCache(diskRoot string, level int) *Cache {
 	return &Cache{
 		diskRoot: strings.TrimSuffix(diskRoot, string(os.PathListSeparator)),
+		level:    level,
 	}
 }
 
@@ -111,7 +114,7 @@ func (c *Cache) Put(key string, content io.Reader, contentSHA256 string) error {
 	//w := zstd.NewWriterLevel(&intermediate, 4)
 	//w.Write(content)
 	compressor := compress.Compressors[compress.ZstdAlgorithmName]
-	compressingWriter := compressor.NewWriter(temp)
+	compressingWriter := compressor.NewWriter(temp, c.level)
 	if contentSHA256 == "" {
 		_, err := compressingWriter.ReadFrom(content)
 		if err != nil {
