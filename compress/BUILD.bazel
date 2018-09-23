@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "compression.go",
+        "io_utils.go",
+        "zstd_compressor.go",
+        "zstd_decompressor.go",
+        "zstd_reader_from_writer.go",
+    ],
+    importpath = "github.com/hawkingrei/greenhouse/compress",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/DataDog/zstd:go_default_library"],
+)

@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["airbrake.go"],
+    importmap = "github.com/hawkingrei/greenhouse/vendor/gopkg.in/gemnasium/logrus-airbrake-hook.v2",
+    importpath = "gopkg.in/gemnasium/logrus-airbrake-hook.v2",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
+        "//vendor/gopkg.in/airbrake/gobrake.v2:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["airbrake_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
+        "//vendor/gopkg.in/airbrake/gobrake.v2:go_default_library",
+    ],
+)

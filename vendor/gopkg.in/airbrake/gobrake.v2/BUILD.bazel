@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "gobrake.go",
+        "notice.go",
+        "notifier.go",
+        "util.go",
+    ],
+    importmap = "github.com/hawkingrei/greenhouse/vendor/gopkg.in/airbrake/gobrake.v2",
+    importpath = "gopkg.in/airbrake/gobrake.v2",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "bench_test.go",
+        "notifier_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//vendor/github.com/onsi/ginkgo:go_default_library",
+        "//vendor/github.com/onsi/gomega:go_default_library",
+    ],
+)

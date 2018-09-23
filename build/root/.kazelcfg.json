@@ -1,0 +1,10 @@
+{
+	"GoPrefix": "go-common",
+	"SkippedPaths": [
+    		"^release",
+    		"^//release"
+  	],
+	"AddSourcesRules": true,
+	"VendorMultipleBuildFiles": true,
+	"ManageGoRules": true
+}

@@ -1,0 +1,49 @@
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+http_archive(
+    name = "io_bazel_rules_go",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.15.3/rules_go-0.15.3.tar.gz",
+    sha256 = "97cf62bdef33519412167fd1e4b0810a318a7c234f5f8dc4f53e2da86241c492",
+)
+
+http_archive(
+    name = "bazel_gazelle",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.14.0/bazel-gazelle-0.14.0.tar.gz"],
+    sha256 = "c0a5739d12c6d05b6c1ad56f2200cb0b57c5a70e03ebd2f7b87ce88cabf09c7b",
+)
+
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "b5f6abe419da897b7901f90cbab08af958b97a8f3575b0d3dd062ac7ce78541f",
+    strip_prefix = "bazel-skylib-0.5.0",
+    urls = ["https://github.com/bazelbuild/bazel-skylib/archive/0.5.0.tar.gz"],
+)
+
+
+load("@bazel_skylib//:lib.bzl", "versions")
+
+versions.check(minimum_bazel_version = "0.17.2")
+
+load("@io_bazel_rules_go//go:def.bzl", "go_download_sdk")
+
+go_download_sdk(
+    name = "go_sdk",
+    sdks = {
+        "linux_amd64":   ("go1.11.linux-amd64.tar.gz",
+	        "b3fcf280ff86558e0559e185b601c9eade0fd24c900b4c63cd14d1d38613e499"),
+        "darwin_amd64":  ("go1.11.darwin-amd64.tar.gz",
+            "9749e6cb9c6d05cf10445a7c9899b58e72325c54fee9783ed1ac679be8e1e073"),
+        "windows_amd64": ("go1.11.windows-amd64.zip",
+            "29f9291270f0b303d0b270f993972ead215b1bad3cc674a0b8a09699d978aeb4"),
+    },
+)
+
+load("@io_bazel_rules_go//third_party:manifest.bzl", "manifest")
+load("@io_bazel_rules_go//go/private:tools/overlay_repository.bzl", "http_archive")
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+gazelle_dependencies()
+
+load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
+go_rules_dependencies()
+go_register_toolchains()

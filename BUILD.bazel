@@ -1,0 +1,61 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+# gazelle:prefix github.com/hawkingrei/greenhouse
+
+package(default_visibility = ["//visibility:public"])
+
+load("@bazel_gazelle//:def.bzl", "gazelle")
+
+gazelle(name = "gazelle")
+
+xcode_version(
+    name = "xcode_version",
+    version = "10.0",
+)
+
+filegroup(
+    name = "package-srcs",
+    srcs = glob(
+        ["**"],
+        exclude = [
+            "bazel-*/**",
+            ".git/**",
+            ".idea/**",
+            "job/**",
+            "ops/**",
+        ],
+    ),
+    tags = ["automanaged"],
+    visibility = ["//visibility:private"],
+)
+
+filegroup(
+    name = "all-srcs",
+    srcs = [
+        ":package-srcs",
+    ],
+    tags = ["automanaged"],
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "eviction.go",
+        "main.go",
+        "prometheus.go",
+    ],
+    importpath = "github.com/hawkingrei/greenhouse",
+    deps = [
+        "//diskcache:go_default_library",
+        "//diskutil:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus/promhttp:go_default_library",
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "greenhouse",
+    embed = [":go_default_library"],
+)
